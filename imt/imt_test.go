@@ -17,7 +17,7 @@ func TestAddLeaf_WithAppendHasher(t *testing.T) {
 	}
 
 	height := 4
-	imt, err := New(height, 2, catFn)
+	imt, err := New(height, catFn)
 	require.NoError(t, err)
 
 	hexRunes := []rune("123456789abcdef")

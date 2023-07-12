@@ -18,7 +18,7 @@ var (
 	ErrHashFailed         = errors.New("failed to perform hash function")
 )
 
-type hashFn = func(data ...[]byte) ([]byte, error)
+type Hash func(data ...[]byte) ([]byte, error)
 
 // IncrementalMerkleTree is an incremental Merkle tree.
 // It can be used to continuously calculate a Merkle
@@ -29,39 +29,48 @@ type IncrementalMerkleTree struct {
 	zeroDigestsPerLevel [][]byte
 	rootDigest          []byte
 
-	hasher    hashFn
+	hash      Hash
 	height    int
 	maxLeaves int
 
 	nextLeafIndex int
 }
 
-func New(height, digestLen int, hasher hashFn) (*IncrementalMerkleTree, error) {
+// New instantiates an Incremental Merkle Tree.
+// The height of the tree determines the maximum number of leaves
+// that can be added to the tree (2^height).
+func New(height int, hash Hash) (*IncrementalMerkleTree, error) {
 	if height > MaxTreeHeight {
 		return nil, ErrTreeHeightTooLarge
 	}
 
+	// Infer size of digests
+	tmpDigest, err := hash(make([]byte, 1))
+	if err != nil {
+		return nil, errors.Join(ErrHashFailed, err)
+	}
+	// Create all zero digests
 	zeroDigests := make([][]byte, height)
-	zeroDigests[0] = make([]byte, digestLen)
+	zeroDigests[0] = make([]byte, len(tmpDigest))
 	for i := 1; i < height; i++ {
-		digest, err := hasher(zeroDigests[i-1], zeroDigests[i-1])
+		digest, err := hash(zeroDigests[i-1], zeroDigests[i-1])
 		if err != nil {
 			return nil, errors.Join(ErrHashFailed, err)
 		}
 		zeroDigests[i] = digest
 	}
 
-	// First root is result of merkling all zeros
 	return &IncrementalMerkleTree{
 		leftDigestsPerLevel: make([][]byte, height),
 		zeroDigestsPerLevel: zeroDigests,
-		hasher:              hasher,
+		hash:                hash,
 		height:              height,
 		maxLeaves:           int(math.Pow(2, float64(height))),
 	}, nil
 }
 
 func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
+	// Cannot add more leaves than the height of the tree allows for
 	if imt.nextLeafIndex >= imt.maxLeaves {
 		return ErrTreeIsFull
 	}
@@ -70,13 +79,10 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 	// We will use this index to traverse the tree nodes
 	// upwards to the root.
 	leftRightIndex := imt.nextLeafIndex
-	latestDigest, err := imt.hasher(leaf)
+	latestDigest, err := imt.hash(leaf)
 	if err != nil {
 		return errors.Join(ErrHashFailed, err)
 	}
-	//println("xxxxxxxxx")
-	//println("initial: ", hex.EncodeToString(latestDigest))
-	//println("nextindex: ", leftRightIndex)
 
 	// Iterate through the levels of the tree,
 	// starting from the bottom.
@@ -104,7 +110,7 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 			right = latestDigest
 		}
 		// Append left and right and hash them together
-		latestDigest, err = imt.hasher(left, right)
+		latestDigest, err = imt.hash(left, right)
 		if err != nil {
 			return errors.Join(ErrHashFailed, err)
 		}
@@ -112,15 +118,14 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 		// E.G. (0,1)->L, (2,3)->R, and so on.
 		leftRightIndex /= 2
 
-		//println("current: ", hex.EncodeToString(latestDigest))
 	}
 
 	// Store the new root digest
 	imt.rootDigest = latestDigest
+
 	// Iterate the index so that we can tell
 	// whether the next leaf is a left or right.
 	imt.nextLeafIndex++
-	//println("root", hex.EncodeToString(imt.rootDigest))
 
 	return nil
 }
