@@ -4,9 +4,11 @@ This repository contains a Go implementation of an Incremental Merkle Tree (IMTs
 
 ## The Algorithm
 
-IMTs are perfect (balanced) binary trees. They allow us to recalcluate tree roots in polynomial time when new leaves are added. This is achieved by utilizing two, constant-sized slices of digests. The zero digest slice is created on initialization and never updated. The left-node digest slice is built up from left-node digests as we add leaves and calculate digests towards the root.
+IMTs are perfect (balanced) binary trees. They allow us to recalcluate tree roots in polynomial time when new leaves are added. This is achieved by utilizing two, constant-sized slices of digests:
+* the zero digest slice which is created on initialization and never updated; and
+* the left-node digest slice which is built up from left-node digests as we add leaves and calculate digests towards the root.
 
-The following depicts what the IMT would look like if we replaced `hash(left, right)` with `cat(left, right)`.
+The following depicts what the IMT would look like if we replaced `hash(left, right)` with `cat(left, right)` for the purposes of visualization.
 
 On creation, all the leaves are zeroes. At this point, we have a slice which contains a single digest for every level of the tree. The tree has a height of 3 so our slice has 3 elements.
 ```mermaid
@@ -32,7 +34,7 @@ end
 5(00) --- 3(0)
 ```
 
-When we add a leaf (A), we recalculate the tree from the bottom-up. As we do this, we maintain a list of the digests of the left-sided nodes.
+When we add a leaf (A), we recalculate the tree from the bottom-up. As we do this, we maintain a list of the digests of the left-sided nodes (A, and A0).
 ```mermaid
 flowchart TD
 subgraph Recalculated
