@@ -1,6 +1,7 @@
 package imt
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
@@ -16,20 +17,52 @@ func TestAddLeaf_WithAppendHasher(t *testing.T) {
 		return append(data[0], data[1]...), nil
 	}
 
-	height := 4
-	imt, err := New(height, catFn)
+	// Instantiate
+	imt, err := New(WithHeight(4), WithHash(catFn))
 	require.NoError(t, err)
 
+	// Add leaves
 	hexRunes := []rune("123456789abcdef")
-	for i := 0; i < height; i++ {
+	leaves := [][]byte{}
+	for i := 0; i < imt.Height(); i++ {
 		// Get hex characters for leaf
 		leaf := "0" + string(hexRunes[i])
 		leafBytes, err := hex.DecodeString(leaf)
 		require.NoError(t, err)
-		t.Log("Added leaf", leaf)
+		t.Log("Adding leaf", leaf)
 
 		// Add leaf
 		require.NoError(t, imt.AddLeaf(leafBytes))
 		t.Log("Latest root", hex.EncodeToString(imt.RootDigest()))
+
+		// Store leaf for test
+		leaves = append(leaves, leafBytes)
 	}
+
+	// Verify root
+	// Root should be all leaves appended + zeroes
+	expectedRoot := []byte{}
+	for _, leaf := range leaves {
+		expectedRoot = append(expectedRoot, leaf...)
+	}
+	remainderLeafCount := imt.MaxLeaves() - len(leaves)
+	for i := 0; i < remainderLeafCount; i++ {
+		b, err := hex.DecodeString("00")
+		require.NoError(t, err)
+		expectedRoot = append(expectedRoot, b...)
+	}
+	require.Equal(t, expectedRoot, imt.RootDigest())
+}
+
+func TestAddLeaf_WithDefaultValues(t *testing.T) {
+	// Instantiate
+	imt, err := New()
+	require.NoError(t, err)
+
+	// Test default root
+	// TODO: get default root 
+
+	// Add leaf
+	require.NoError(t, imt.AddLeaf([]byte("test")))
+	require.Len(t, imt.RootDigest(), sha256.Size)
 }

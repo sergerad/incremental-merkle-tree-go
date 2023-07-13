@@ -18,6 +18,8 @@ var (
 	ErrHashFailed         = errors.New("failed to perform hash function")
 )
 
+// Hash represents a function that creates a digest
+// from some provided data.
 type Hash func(data ...[]byte) ([]byte, error)
 
 // IncrementalMerkleTree is an incremental Merkle tree.
@@ -25,12 +27,12 @@ type Hash func(data ...[]byte) ([]byte, error)
 // root hash in polynomial time as the leaves are
 // added to the tree.
 type IncrementalMerkleTree struct {
+	options
+
 	leftDigestsPerLevel [][]byte
 	zeroDigestsPerLevel [][]byte
 	rootDigest          []byte
 
-	hash      Hash
-	height    int
 	maxLeaves int
 
 	nextLeafIndex int
@@ -39,21 +41,24 @@ type IncrementalMerkleTree struct {
 // New instantiates an Incremental Merkle Tree.
 // The height of the tree determines the maximum number of leaves
 // that can be added to the tree (2^height).
-func New(height int, hash Hash) (*IncrementalMerkleTree, error) {
-	if height > MaxTreeHeight {
-		return nil, ErrTreeHeightTooLarge
+func New(opts ...Option) (*IncrementalMerkleTree, error) {
+	// Process options
+	o, err := handleOptions(opts...)
+	if err != nil {
+		return nil, err
 	}
 
 	// Infer size of digests
-	tmpDigest, err := hash(make([]byte, 1))
+	tmpDigest, err := o.hash(make([]byte, 1))
 	if err != nil {
 		return nil, errors.Join(ErrHashFailed, err)
 	}
+
 	// Create all zero digests
-	zeroDigests := make([][]byte, height)
+	zeroDigests := make([][]byte, o.height)
 	zeroDigests[0] = make([]byte, len(tmpDigest))
-	for i := 1; i < height; i++ {
-		digest, err := hash(zeroDigests[i-1], zeroDigests[i-1])
+	for i := 1; i < o.height; i++ {
+		digest, err := o.hash(zeroDigests[i-1], zeroDigests[i-1])
 		if err != nil {
 			return nil, errors.Join(ErrHashFailed, err)
 		}
@@ -61,11 +66,10 @@ func New(height int, hash Hash) (*IncrementalMerkleTree, error) {
 	}
 
 	return &IncrementalMerkleTree{
-		leftDigestsPerLevel: make([][]byte, height),
+		options:             *o,
+		leftDigestsPerLevel: make([][]byte, o.height),
 		zeroDigestsPerLevel: zeroDigests,
-		hash:                hash,
-		height:              height,
-		maxLeaves:           int(math.Pow(2, float64(height))),
+		maxLeaves:           int(math.Pow(2, float64(o.height))),
 	}, nil
 }
 
@@ -130,8 +134,22 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 	return nil
 }
 
+// RootDigest returns the current root of the tree.
+// The root digest changes every time a leaf is added to the tree.
 func (imt *IncrementalMerkleTree) RootDigest() []byte {
 	root := make([]byte, len(imt.rootDigest))
 	copy(root, imt.rootDigest)
 	return root
+}
+
+// Height returns the number of levels to the tree.
+// Height is set on creation and cannot be changed.
+func (imt *IncrementalMerkleTree) Height() int {
+	return imt.height
+}
+
+// MaxLeaves returns the maximum number of leaves that can be
+// added to the tree. This is determined by the height of the tree.
+func (imt *IncrementalMerkleTree) MaxLeaves() int {
+	return imt.maxLeaves
 }
