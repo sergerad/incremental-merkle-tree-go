@@ -59,8 +59,9 @@ func TestAddLeaf_WithDefaultValues(t *testing.T) {
 	imt, err := New()
 	require.NoError(t, err)
 
-	// Test default root
-	// TODO: get default root 
+	// Test default root of a tree of height 32
+	expectedRoot := "985e929f70af28d0bdd1a90a808f977f597c7c778c489e98d3bd8910d31ac0f7"
+	require.Equal(t, expectedRoot, hex.EncodeToString(imt.RootDigest()))
 
 	// Add leaf
 	require.NoError(t, imt.AddLeaf([]byte("test")))

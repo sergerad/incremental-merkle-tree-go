@@ -48,15 +48,9 @@ func New(opts ...Option) (*IncrementalMerkleTree, error) {
 		return nil, err
 	}
 
-	// Infer size of digests
-	tmpDigest, err := o.hash(make([]byte, 1))
-	if err != nil {
-		return nil, errors.Join(ErrHashFailed, err)
-	}
-
 	// Create all zero digests
 	zeroDigests := make([][]byte, o.height)
-	zeroDigests[0] = make([]byte, len(tmpDigest))
+	zeroDigests[0] = make([]byte, o.digestSize)
 	for i := 1; i < o.height; i++ {
 		digest, err := o.hash(zeroDigests[i-1], zeroDigests[i-1])
 		if err != nil {
@@ -70,6 +64,7 @@ func New(opts ...Option) (*IncrementalMerkleTree, error) {
 		leftDigestsPerLevel: make([][]byte, o.height),
 		zeroDigestsPerLevel: zeroDigests,
 		maxLeaves:           int(math.Pow(2, float64(o.height))),
+		rootDigest:          zeroDigests[o.height-1],
 	}, nil
 }
 
@@ -137,7 +132,7 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 // RootDigest returns the current root of the tree.
 // The root digest changes every time a leaf is added to the tree.
 func (imt *IncrementalMerkleTree) RootDigest() []byte {
-	root := make([]byte, len(imt.rootDigest))
+	root := make([]byte, imt.digestSize)
 	copy(root, imt.rootDigest)
 	return root
 }

@@ -2,6 +2,36 @@
 
 This repository contains a Go implementation of an Incremental Merkle Tree (IMTs).
 
+## Usage
+
+Import the `imt` pkg:
+```Go
+import (
+	"github.com/sergerad/incremental-merkle-tree/imt"
+)
+```
+
+Instantiate the Incremental Merkle Tree with default values:
+```Go
+tree, err := imt.New()
+```
+
+Or specify your own configuration:
+```Go
+hashFn := func(data ...[]byte) ([]byte, error) { ... }
+tree, err := imt.New(WithHeight(4), WithHash(hashFn))
+```
+
+Add leaves to the tree:
+```Go
+err := tree.AddLeaf([]byte("leaf"))
+```
+
+Get the root of the latest tree after adding leaves:
+```Go
+root := tree.RootDigest()
+```
+
 ## The Algorithm
 
 IMTs are perfect (balanced) binary trees. They allow us to recalcluate tree roots in polynomial time when new leaves are added. This is achieved by utilizing two, constant-sized slices of digests:

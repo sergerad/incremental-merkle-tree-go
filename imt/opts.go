@@ -1,13 +1,19 @@
 package imt
 
 import (
+	"errors"
+
 	"github.com/sergerad/incremental-merkle-tree/hash/sha256"
 )
 
 type options struct {
-	height int
-	hash   Hash
+	height     int
+	hash       Hash
+	digestSize int
 }
+
+// Option is a function that sets a non-default
+// values for configuration of the Incremental Merkle Tree.
 type Option func(*options)
 
 // WithHeight sets a non-default value for the
@@ -33,16 +39,25 @@ func handleOptions(opts ...Option) (*options, error) {
 		optsFn(o)
 	}
 
-	// Ensure appropriate values
+	// Default height
 	if o.height == 0 {
 		o.height = MaxTreeHeight
 	}
+	// Max height
 	if o.height > MaxTreeHeight {
 		return nil, ErrTreeHeightTooLarge
 	}
+	// Default hash
 	if o.hash == nil {
 		o.hash = sha256.Hash
 	}
+
+	// Infer size of digests
+	tmpDigest, err := o.hash(make([]byte, 1))
+	if err != nil {
+		return nil, errors.Join(ErrHashFailed, err)
+	}
+	o.digestSize = len(tmpDigest)
 
 	return o, nil
 }
