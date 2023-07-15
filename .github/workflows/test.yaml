@@ -25,6 +25,11 @@ jobs:
       run: |
         go get -v -t -d ./...
 
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v1.53
+
     - name: Go build
       run: go build -v ./...
 
