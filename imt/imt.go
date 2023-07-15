@@ -132,7 +132,7 @@ func (imt *IncrementalMerkleTree) AddLeaf(leaf []byte) error {
 // RootDigest returns the current root of the tree.
 // The root digest changes every time a leaf is added to the tree.
 func (imt *IncrementalMerkleTree) RootDigest() []byte {
-	root := make([]byte, imt.digestSize)
+	root := make([]byte, len(imt.rootDigest))
 	copy(root, imt.rootDigest)
 	return root
 }

@@ -1,6 +1,8 @@
 # Incremental Merkle Tree
 
-This repository contains a Go implementation of an Incremental Merkle Tree (IMTs).
+This repository contains a Go implementation of an Incremental Merkle Tree (IMT).
+
+Incremental Merkle Trees are particularly useful in blockchain smart contracts like the [Ethereum 2.0 Deposit Contract](https://github.com/runtimeverification/deposit-contract-verification/blob/master/deposit-contract-verification.pdf).
 
 ## Usage
 
